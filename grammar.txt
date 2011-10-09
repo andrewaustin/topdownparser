@@ -1,0 +1,101 @@
+program       -> {var|type|forward|proc} stms
+
+id            -> [A-Za-z][A-Za-z0-9_]*
+int           -> [0-9]+ 
+string        -> "[^"\n]*"
+               | '[^'\n]*'
+
+stms          -> stm { stm } 
+
+stm           -> if | do | fa 
+               | 'break' ';' 
+               | 'exit' ';'
+               | 'return' ';'
+               | 'write' exp ';'
+               | 'writes' exp ';'
+               | exp ';'
+               | ';' 
+
+# It might be easiest to just use two look ahead tokens here.
+if            -> 'if' Expr '->' stms ifPrime
+                    
+ifPrime       -> '[]' ifPrime2 
+               | 'fi'
+
+ifPrime2      -> 'else' '->' stms 'fi'
+               | Expr '->' stms ifPrime
+
+do            -> 'do' Expr '->' stms 'od'
+
+fa            -> 'fa' id ':=' Expr 'to' Expr '->' stms 'af'
+
+proc          -> 'proc' id '(' declist ')' procPrime
+procPrime     -> ':' typeid procEnd
+               | procEnd
+procEnd       -> {type|var} {stms} 'end'
+
+
+idlist        -> id { ',' id}
+
+var           -> 'var' varlist
+
+varlist       -> idlist ':' typeid { '[' int ']' } { ',' varlist }
+
+forward       -> 'forward' id '(' declist ')'
+               | 'forward' id '(' declist ')' ':' typeid
+
+declist       -> idlist ':' typeid { ',' declist }
+               | ε
+
+type          -> 'type' id  '=' typeid { '[' int ']' }
+
+typeid        -> id
+
+# rules for exp, with precedence added
+
+Expr          -> Low ExprPrime
+ExprPrime     -> '=' Low
+               | '!=' Low
+               | '>' Low
+               | '<' Low
+               | '>=' Low
+               | '<=' Low
+               | ε
+
+Low           -> Med LowPrime
+LowPrime      -> '+' Med LowPrime
+               | '-' Med LowPrime
+               | ε
+
+
+Med           -> High MedPrime
+MedPrime      -> '*' High MedPrime
+               | '/' High MedPrime
+               | '%' High MedPrime
+               | ε
+
+High          -> '-' High
+               | '?' High
+               | End
+
+# plain ids and arrays
+
+lvaluePrime   -> '[' Expr ']' lValuePrime
+               | ε
+
+# highest operator precedence
+End           -> '(' Expr ')'
+               | int
+               | 'true'
+               | 'false'
+               | string
+               | 'read'
+               | id '(' ProcCall
+               | id lvaluePrime ValueOrAssn
+
+ProcCall      -> Expr { ',' Expr } ')'
+               | ')'
+
+# assignment
+ValueOrAssn   -> ':=' Expr
+               | ε
