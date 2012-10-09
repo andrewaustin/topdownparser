@@ -37,24 +37,6 @@ python scanner.py simple\_expr.ice9
 To see the full parse tree:
 
 python ice9.py < simple\_expr.ice9  
-    (#PGRM#)  
-     (#Stms#)  
-       (#Stm#)  
-        (#Expr#)  
-        (#Low#)  
-         (#Med#)  
-          (#High#)  
-           (#End#)  
-            (x)  
-         (+)  
-          (#Med#)  
-           (#High#)  
-            (#End#)  
-             (2)  
-           (/)  
-            (#High#)  
-             (#End#)  
-              (3)  
 
 Changelog
 ---------
