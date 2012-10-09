@@ -1,28 +1,45 @@
 #!/usr/bin/python
+
 from scanner import ice9Scanner
 from tree import Node
 import sys
 
+
 DEBUG = 0
 
+
 class SyntaxError(Exception):
+    """A custom exception to represent a syntax error."""
     def __init__(self, line, token):
+        """Constructor that stores the line and token error was encountered
+           at."""
         self.line = line
         self.token = token
+
     def __str__(self):
+        """Custom string representation of this exception. Output is
+           slightly different if we encounter syntax error at EOF vs
+           on a normal line."""
         if self.token == ('EOF', 'EOF'):
             return "line " + str(self.line) + ": syntax error near end of file"
-        return  "line "+ str(self.line) + ": syntax error near " + self.token[1]
+        return  "line " + str(self.line) + ": syntax error near " + self.token[1]
+
 
 class ice9Parser:
+    """An ice9 Parser class."""
     def __init__(self):
+        """Constructor that initializes member variables."""
         self.token = ""
         self.tokens = []
         self.currentLine = 1
         self.current = None
 
     def makenode(rule):
+        """Decorator that constructs a parse tree based on the order methods
+           are invoked."""
         def modify(self):
+            """The function that wraps each function that accepts a part of the
+            grammar."""
             self.current = self.current.addChild(Node('#' + rule.func_name + '#', self.currentLine))
             val = rule(self)
             if val:
@@ -36,11 +53,15 @@ class ice9Parser:
                 self.current = node.parent
             return val
         return modify
-     
+
     def getCurrentLine(self):
+        """Function that simply returns the current line."""
         return self.currentLine
 
     def getNextToken(self):
+        """Token that returns the next token from the list of tokens.
+           If the next Token is a newline, increment the line count
+           and get a new token until it is not a newline."""
         token = self.tokens.pop(0)
         while token == ('NL', 'NL'):
             token = self.tokens.pop(0)
@@ -48,6 +69,7 @@ class ice9Parser:
         return token
 
     def parse(self, tokens):
+        """Parses a list of tokens."""
         # make sure each parse tree is fresh
         self.__init__()
         self.tokens = tokens
@@ -59,8 +81,12 @@ class ice9Parser:
             print e
             sys.exit(1)
         return self.current
- 
+
     def Goal(self):
+        """The first hop in our recursive descent parser.
+           Our Goal is to recognize a valid program. We
+           set out on this task by getting the first token and checking
+           to see if it is a valid program."""
         self.token = self.getNextToken()
         # Goal -> Program
         if self.Program() and self.token[0] == 'EOF':
@@ -68,26 +94,33 @@ class ice9Parser:
         else:
             #error
             return False
-      
+
     def Program(self):
+        """The start of our program.
+           Grammar Rule: program -> {var|type|forward|proc} stms
+           """
         self.current = Node('#PGRM#')
         while self.var() or self.type() or self.forward() or self.proc():
             pass
         else:
             # Program -> Stms
             if not self.Stms():
-                raise SyntaxError(self.getCurrentLine(), self.token) 
+                raise SyntaxError(self.getCurrentLine(), self.token)
         return True
 
-    @makenode    
+    @makenode
     def var(self):
+        """Grammar Rule: var -> 'var' varlist"""
         if self.token == ('KEY', 'var'):
             self.token = self.getNextToken()
             return self.varlist()
         return False
-    
+
     @makenode
     def varlist(self):
+        """Grammar Rule:
+        varlist-> idlist ':' typeid { '[' int ']' } {',' varlist }
+        """
         if self.idlist():
             if self.token == ('SYM', ':'):
                 self.token = self.getNextToken()
@@ -101,7 +134,7 @@ class ice9Parser:
                             if self.token == ('SYM', ']'):
                                 self.current = self.current.parent
                                 self.token = self.getNextToken()
-                                continue                               
+                                continue
                         raise SyntaxError(self.getCurrentLine(), self.token)
                     else:
                         while self.token == ('SYM', ','):
@@ -112,9 +145,10 @@ class ice9Parser:
                                 raise SyntaxError(self.getCurrentLine(), self.token)
                     return True
         raise SyntaxError(self.getCurrentLine(), self.token)
-    
+
     @makenode
     def idlist(self):
+        """Grammar Rule: idlist-> id { ',' id}"""
         if self.token[0] == 'ID':
             self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
@@ -130,6 +164,9 @@ class ice9Parser:
 
     @makenode
     def type(self):
+        """Grammar Rule:
+            type-> 'type' id  '=' typeid { '[' int ']' }
+        """
         if self.token == ('KEY', 'type'):
             self.token = self.getNextToken()
             if self.token[0] == 'ID':
@@ -150,11 +187,15 @@ class ice9Parser:
                                     continue
                             raise SyntaxError(self.getCurrentLine(), self.token)
                         return True
-            raise SyntaxError(self.getCurrentLine(), self.token)                
+            raise SyntaxError(self.getCurrentLine(), self.token)
         return False
 
     @makenode
     def forward(self):
+        """Grammar Rules:
+            forward-> 'forward' id '(' declist ')'
+                    | 'forward' id '(' declist ')' ':' typeid
+        """
         if self.token == ('KEY', 'forward'):
             self.token = self.getNextToken()
             if self.token[0] == 'ID':
@@ -170,12 +211,13 @@ class ice9Parser:
                                     return True
                                 else:
                                     raise SyntaxError(self.getCurrentLine(), self.token)
-                            return True        
+                            return True
             raise SyntaxError(self.getCurrentLine(), self.token)
         return False
 
     @makenode
     def proc(self):
+        """Grammar Rule: proc-> 'proc' id '(' declist ')' procPrime"""
         if self.token == ('KEY', 'proc'):
             self.token = self.getNextToken()
             if self.token[0] == 'ID':
@@ -188,13 +230,14 @@ class ice9Parser:
                         self.current = self.current.parent
                         if self.token == ('SYM', ')'):
                             self.token = self.getNextToken()
-                            res =  self.procPrime()
+                            res = self.procPrime()
                             #self.current = self.current.parent
                             return res
             raise SyntaxError(self.getCurrentLine(), self.token)
         return False
 
     def procPrime(self):
+        """Grammar Rule: procPrime -> ':' typeid procEnd | procEnd"""
         if self.token == ('SYM', ':'):
             #self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
@@ -204,6 +247,7 @@ class ice9Parser:
         return self.procEnd()
 
     def procEnd(self):
+        """Grammar Rule: procEnd-> {type|var} {stms} 'end'"""
         while self.type() or self.var():
             continue
         while self.Stm():
@@ -216,6 +260,9 @@ class ice9Parser:
         return False
 
     def declist(self):
+        """Grammar Rule: declist-> idlist ':' typeid { ',' declist }
+                                 | nullProduction
+        """
         if self.idlist():
             if self.token == ('SYM', ':'):
                 self.token = self.getNextToken()
@@ -226,13 +273,13 @@ class ice9Parser:
                             raise SyntaxError(self.getCurrentLine(), self.token)
                     else:
                         return True
-            
+
             raise SyntaxError(self.getCurrentLine(), self.token)
         return True
-    
+
     @makenode
     def Stms(self):
-        #Stms -> Stm { Stm }
+        """Grammar Rule: stms -> stm { stm }"""
         if self.Stm():
             while self.token != ('EOF', 'EOF') and self.Stm():
                 pass
@@ -241,6 +288,16 @@ class ice9Parser:
 
     @makenode
     def Stm(self):
+        """Grammar Rule:
+           stm -> if | do | fa
+               | 'break' ';'
+               | 'exit' ';'
+               | 'return' ';'
+               | 'write' exp ';'
+               | 'writes' exp ';'
+               | exp ';'
+               | ';'
+        """
         # Stm -> if
         if self.ifStm():
             return True
@@ -276,16 +333,17 @@ class ice9Parser:
                 self.token = self.getNextToken()
                 return True
             raise SyntaxError(self.getCurrentLine(), self.token)
-        # Stm -> ;        
+        # Stm -> ;
         elif self.token == ('SYM', ';'):
             # Don't add ; to the tree
             self.token = self.getNextToken()
             return True
         else:
             return False
-    
+
     @makenode
     def ifStm(self):
+        """Grammar Rule: if -> 'if' Expr '->' stms ifPrime"""
         if self.token[0] == "KEY" and self.token[1] == "if":
             self.current = self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
@@ -302,6 +360,10 @@ class ice9Parser:
 
     @makenode
     def ifPrime(self):
+        """Grammar Rule:
+            ifPrime -> '[]' ifPrime2
+                    | 'fi'
+        """
         if self.token[0] == 'SYM' and self.token[1] == '[]':
             #self.current = self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
@@ -310,10 +372,14 @@ class ice9Parser:
             self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
             return True
-        return False    
+        return False
 
     @makenode
     def ifDoublePrime(self):
+        """Grammar Rule:
+            ifPrime2 -> 'else' '->' stms 'fi'
+                     | Expr '->' stms ifPrime
+        """
         if self.token[0] == 'KEY' and self.token[1] == 'else':
             self.current = self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
@@ -332,15 +398,16 @@ class ice9Parser:
                     return self.ifPrime()
             raise SyntaxError(self.getCurrentLine(), self.token)
         return False
-    
+
     @makenode
     def doStm(self):
+        """Grammar Rule: do -> 'do' Expr '->' stms 'od'"""
         if self.token[0] == 'KEY' and self.token[1] == 'do':
             self.current = self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
             if self.Expr():
                 if self.token[0] == 'SYM' and self.token[1] == '->':
-                    
+
                     self.token = self.getNextToken()
                     if self.Stms():
                         if self.token[0] == 'KEY' and self.token[1] == 'od':
@@ -353,6 +420,7 @@ class ice9Parser:
 
     @makenode
     def faStm(self):
+        """Grammar Rule: fa -> 'fa' id ':=' Expr 'to' Expr '->' stms 'af'"""
         if self.token[0] == 'KEY' and self.token[1] == 'fa':
             self.current = self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
@@ -380,6 +448,7 @@ class ice9Parser:
 
     @makenode
     def typeid(self):
+        """Grammar Rule: typeid -> id"""
         if self.token[0] == 'ID':
             self.current.addChild(Node(self.token[1], self.currentLine))
             self.token = self.getNextToken()
@@ -388,37 +457,51 @@ class ice9Parser:
 
     @makenode
     def Expr(self):
-        # Expr -> Low ExprPrime
+        """Grammar Rule: Expr -> Low ExprPrime"""
         if self.Low():
             return self.ExprPrime()
         else:
             return False
-   
+
     def ExprPrime(self):
+        """Grammar Rule:
+            ExprPrime -> '=' Low
+               | '!=' Low
+               | '>' Low
+               | '<' Low
+               | '>=' Low
+               | '<=' Low
+               | nullProduction
+        """
         if self.token == ('OP', '=') or self.token == ('OP', '!=') or \
             self.token == ('OP', '>') or self.token == ('OP', '<') or \
-            self.token == ('OP', '>=') or self.token == ('OP', '<='): 
+            self.token == ('OP', '>=') or self.token == ('OP', '<='):
                 self.current = self.current.addChild(Node(self.token[1], self.currentLine, self.token[0]))
                 self.token = self.getNextToken()
                 if not self.Low():
                     raise SyntaxError(self.getCurrentLine(), self.token)
                 self.current = self.current.parent
         # empty string
-        return True       
+        return True
 
     @makenode
     def Low(self):
+        """Grammar Rule: Low -> Med LowPrime"""
         if self.Med():
             return self.LowPrime()
         else:
             return False
-    
+
     def LowPrime(self):
+        """Grammar Rule: LowPrime -> '+' Med LowPrime
+                                  | '-' Med LowPrime
+                                  | nullProduction
+        """
         if self.token == ('OP', '+') or self.token == ('OP', '-'):
             self.current = self.current.addChild(Node(self.token[1], self.currentLine, self.token[0]))
             self.token = self.getNextToken()
             if self.Med():
-                ret =  self.LowPrime()
+                ret = self.LowPrime()
                 self.current = self.current.parent
                 return ret
             raise SyntaxError(self.getCurrentLine(), self.token)
@@ -427,12 +510,19 @@ class ice9Parser:
 
     @makenode
     def Med(self):
-       if self.High():
-           return self.MedPrime()
-       else:
-           return False
-    
+        """Grammar Rule: Med -> High MedPrime"""
+        if self.High():
+            return self.MedPrime()
+        else:
+            return False
+
     def MedPrime(self):
+        """Grammar Rule:
+            MedPrime  -> '*' High MedPrime
+               | '/' High MedPrime
+               | '%' High MedPrime
+               | nullProduction
+        """
         if self.token == ('OP', '*') or self.token == ('OP', '/') or self.token == ('OP', '%'):
                 self.current = self.current.addChild(Node(self.token[1], self.currentLine, self.token[0]))
                 self.token = self.getNextToken()
@@ -446,6 +536,11 @@ class ice9Parser:
 
     @makenode
     def High(self):
+        """Grammar Rule:
+            High -> '-' High
+               | '?' High
+               | End
+        """
         if self.End():
             # rewind tree
             return True
@@ -460,10 +555,20 @@ class ice9Parser:
                 self.current = self.current.parent
                 return True
         # empty string
-        return False        
+        return False
 
     @makenode
     def End(self):
+        """Grammar Rule:
+            End -> '(' Expr ')'
+               | int
+               | 'true'
+               | 'false'
+               | string
+               | 'read'
+               | id '(' ProcCall
+               | id lvaluePrime ValueOrAssn
+        """
         if self.token[1] == '(':
             self.current = self.current.addChild(Node('()', self.currentLine))
             self.token = self.getNextToken()
@@ -504,6 +609,8 @@ class ice9Parser:
         return False
 
     def LValuePrime(self):
+        """Grammar Rule: lvaluePrime -> '[' Expr ']' lValuePrime |
+        nullProduction"""
         if self.token[0] == 'SYM' and self.token[1] == '[':
             self.current = self.current.addChild(Node('[]', self.currentLine))
             self.token = self.getNextToken()
@@ -512,11 +619,12 @@ class ice9Parser:
                     self.current = self.current.parent
                     self.token = self.getNextToken()
                     return self.LValuePrime()
-            
+
             raise SyntaxError(self.getCurrentLine(), self.token)
         return True
 
     def Assn(self):
+        """Grammar Rule: ValueOrAssn -> ':=' Expr | nullProduction"""
         if self.token[0] == 'SYM' and self.token[1] == ':=':
             self.current = self.current.addChild(Node(self.token[1], self.currentLine, 'OP'))
             self.token = self.getNextToken()
@@ -524,9 +632,10 @@ class ice9Parser:
                 raise SyntaxError(self.getCurrentLine(), self.token)
             self.current = self.current.parent
         return True
-    
+
     @makenode
     def ProcCall(self):
+        """Grammar Rule: ProcCall -> Expr { ',' Expr } ')' | ')'"""
         if self.token[0] == 'SYM' and self.token[1] == ')':
             self.token = self.getNextToken()
             return True
