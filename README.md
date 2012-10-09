@@ -24,42 +24,41 @@ Usage
 -----
 To see a list of tokens:
 
-> python scanner.py simple\_expr.ice9
-> ('ID', 'x')
-> ('OP', '+')
-> ('INT', '2')
-> ('OP', '/')
-> ('INT', '3')
-> ('SYM', ';')
-> ('NL', 'NL')
-> ('EOF', 'EOF')
+> python scanner.py simple\_expr.ice9  
+> ('ID', 'x')  
+> ('OP', '+')  
+> ('INT', '2')  
+> ('OP', '/')  
+> ('INT', '3')  
+> ('SYM', ';')  
+> ('NL', 'NL')  
+> ('EOF', 'EOF')  
 
 To see the full parse tree:
 
-> python ice9.py < simple\_expr.ice9
-> (#PGRM#)
->  (#Stms#)
->   (#Stm#)
->    (#Expr#)
->    (#Low#)
->     (#Med#)
->      (#High#)
->       (#End#)
->        (x)
->     (+)
->      (#Med#)
->       (#High#)
->        (#End#)
->         (2)
->       (/)
->        (#High#)
->         (#End#)
->          (3)
+> python ice9.py < simple\_expr.ice9  
+> (#PGRM#)  
+>  (#Stms#)  
+>   (#Stm#)  
+>    (#Expr#)  
+>    (#Low#)  
+>     (#Med#)  
+>      (#High#)  
+>       (#End#)  
+>        (x)  
+>     (+)  
+>      (#Med#)  
+>       (#High#)  
+>        (#End#)  
+>         (2)  
+>       (/)  
+>        (#High#)  
+>         (#End#)  
+>          (3)  
 
 Changelog
 ---------
 10/09/12 - After several years of sitting on github unedited, made several style
-          changes to fit with pep8, etc.
-03/01/09 - Added code to create parse tree from parser
-02/01/09 - Developed initial version of parser.
-
+          changes to fit with pep8, etc.  
+03/01/09 - Added code to create parse tree from parser  
+02/01/09 - Developed initial version of parser.  
