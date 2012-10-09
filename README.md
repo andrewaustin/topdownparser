@@ -12,7 +12,7 @@ readable (mainly comments) but in general, the code is
 probably very poor. A large number of the lines are greater than 80 characters
 which is not PEP8 compliant, for example.
 
-*Its still a hand written parser though, which I think is pretty cool. =)*
+**Its still a hand written parser though, which I think is pretty cool. =)**
 
 Grammar
 -------
@@ -24,38 +24,37 @@ Usage
 -----
 To see a list of tokens:
 
-python scanner.py simple\_expr.ice9
-('ID', 'x')
-('OP', '+')
-('INT', '2')
-('OP', '/')
-('INT', '3')
-('SYM', ';')
-('NL', 'NL')
-('EOF', 'EOF')
+> python scanner.py simple\_expr.ice9
+> ('ID', 'x')
+> ('OP', '+')
+> ('INT', '2')
+> ('OP', '/')
+> ('INT', '3')
+> ('SYM', ';')
+> ('NL', 'NL')
+> ('EOF', 'EOF')
 
 To see the full parse tree:
 
-python ice9.py < simple\_expr.ice9
-(#PGRM#)
- (#Stms#)
-  (#Stm#)
-   (#Expr#)
-    (#Low#)
-     (#Med#)
-      (#High#)
-       (#End#)
-        (x)
-     (+)
-      (#Med#)
-       (#High#)
-        (#End#)
-         (2)
-       (/)
-        (#High#)
-         (#End#)
-          (3)
-
+> python ice9.py < simple\_expr.ice9
+> (#PGRM#)
+>  (#Stms#)
+>   (#Stm#)
+>    (#Expr#)
+>    (#Low#)
+>     (#Med#)
+>      (#High#)
+>       (#End#)
+>        (x)
+>     (+)
+>      (#Med#)
+>       (#High#)
+>        (#End#)
+>         (2)
+>       (/)
+>        (#High#)
+>         (#End#)
+>          (3)
 
 Changelog
 ---------
